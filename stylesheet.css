@@ -1,0 +1,17 @@
+.mikrotik-panel-box {
+    spacing: 4px;
+}
+
+.mikrotik-panel-label {
+    font-feature-settings: "tnum";
+}
+
+.mikrotik-graph-label {
+    font-family: monospace;
+    font-size: 13px;
+    letter-spacing: 0px;
+}
+
+.mikrotik-status-item {
+    font-weight: bold;
+}

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.mikrotik-traffic" path="/org/gnome/shell/extensions/mikrotik-traffic/">
+    <key name="router-host" type="s">
+      <default>'192.168.88.1'</default>
+      <summary>Router IP or hostname</summary>
+    </key>
+    <key name="router-port" type="i">
+      <range min="1" max="65535"/>
+      <default>443</default>
+      <summary>REST API port</summary>
+    </key>
+    <key name="use-https" type="b">
+      <default>true</default>
+      <summary>Use HTTPS (www-ssl service) instead of plain HTTP</summary>
+    </key>
+    <key name="ignore-cert-errors" type="b">
+      <default>true</default>
+      <summary>Ignore TLS certificate errors (needed for the router's self-signed cert)</summary>
+    </key>
+    <key name="username" type="s">
+      <default>'apiuser'</default>
+      <summary>API username</summary>
+    </key>
+    <key name="password" type="s">
+      <default>''</default>
+      <summary>API password (stored in plain text in dconf)</summary>
+    </key>
+    <key name="interface-name" type="s">
+      <default>'ether1'</default>
+      <summary>Interface to monitor</summary>
+    </key>
+    <key name="poll-interval" type="i">
+      <range min="1" max="300"/>
+      <default>1</default>
+      <summary>Polling interval in seconds</summary>
+    </key>
+    <key name="graph-width" type="i">
+      <range min="20" max="120"/>
+      <default>60</default>
+      <summary>Width (characters) of the text graph</summary>
+    </key>
+  </schema>
+</schemalist>
