@@ -54,10 +54,14 @@ Configure:
 - Certificate validation behavior
 - RouterOS username and password
 - Interface name, such as `ether1`
+- Whether to monitor received traffic (RX)
+- Whether to monitor transmitted traffic (TX)
 - Poll interval from 1 to 300 seconds
 - Graph width from 20 to 120 characters
 
 The default poll interval is 1 second. The password is stored in plain text in GNOME settings, so use a dedicated read-only RouterOS account.
+
+Use the **Apply** button in the preferences window to save changes and restart traffic collection immediately. At least one of RX or TX must be enabled.
 
 ## Usage
 
@@ -67,6 +71,7 @@ The top-panel indicator shows the current RX and TX rates. Click it to view:
 - RX history for the last hour
 - TX history for the last hour
 - A manual **Refresh now** action
+- An **Apply settings** action that restarts polling immediately
 - A shortcut to the extension settings
 
 ## Troubleshooting

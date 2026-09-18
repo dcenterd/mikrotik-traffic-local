@@ -66,6 +66,9 @@ class MikrotikIndicator extends PanelMenu.Button {
         this._session = new Soup.Session();
         this._session.timeout = 8;
         this._timeoutId = null;
+        this._settingsChangedId = this._settings.connect('changed', () => {
+            this._applySettings();
+        });
 
         this._rxHistory = []; // [{t, v}]
         this._txHistory = [];
@@ -115,9 +118,14 @@ class MikrotikIndicator extends PanelMenu.Button {
         const settingsItem = new PopupMenu.PopupMenuItem('Settings…');
         settingsItem.connect('activate', () => this._extension.openPreferences());
         this.menu.addMenuItem(settingsItem);
+
+        const applyItem = new PopupMenu.PopupMenuItem('Apply settings');
+        applyItem.connect('activate', () => this._applySettings());
+        this.menu.addMenuItem(applyItem);
     }
 
     _startPolling() {
+        this._stopPolling();
         this._poll();
         const interval = Math.max(1, this._settings.get_int('poll-interval'));
         this._timeoutId = GLib.timeout_add_seconds(
@@ -130,6 +138,19 @@ class MikrotikIndicator extends PanelMenu.Button {
         );
     }
 
+    _stopPolling() {
+        if (this._timeoutId) {
+            GLib.source_remove(this._timeoutId);
+            this._timeoutId = null;
+        }
+    }
+
+    _applySettings() {
+        this._rxHistory = [];
+        this._txHistory = [];
+        this._startPolling();
+    }
+
     _poll() {
         const host = this._settings.get_string('router-host');
         const port = this._settings.get_int('router-port');
@@ -138,9 +159,15 @@ class MikrotikIndicator extends PanelMenu.Button {
         const pass = this._settings.get_string('password');
         const iface = this._settings.get_string('interface-name');
         const ignoreCert = this._settings.get_boolean('ignore-cert-errors');
+        const monitorRx = this._settings.get_boolean('monitor-rx');
+        const monitorTx = this._settings.get_boolean('monitor-tx');
 
         if (!host || !iface) {
             this._onError('Not configured — set host & interface in Settings');
+            return;
+        }
+        if (!monitorRx && !monitorTx) {
+            this._onError('Select receive or transmit traffic in Settings');
             return;
         }
 
@@ -188,7 +215,7 @@ class MikrotikIndicator extends PanelMenu.Button {
                 }
                 const rx = parseInt(entry['rx-bits-per-second'] ?? 0, 10);
                 const tx = parseInt(entry['tx-bits-per-second'] ?? 0, 10);
-                this._onData(rx, tx);
+                this._onData(monitorRx ? rx : null, monitorTx ? tx : null);
             } catch (e) {
                 this._onError(e.message);
             }
@@ -197,8 +224,10 @@ class MikrotikIndicator extends PanelMenu.Button {
 
     _onData(rx, tx) {
         const now = GLib.get_monotonic_time() / 1e6;
-        this._rxHistory.push({t: now, v: rx});
-        this._txHistory.push({t: now, v: tx});
+        if (rx !== null)
+            this._rxHistory.push({t: now, v: rx});
+        if (tx !== null)
+            this._txHistory.push({t: now, v: tx});
 
         const cutoff = now - HISTORY_SECONDS;
         this._rxHistory = this._rxHistory.filter(p => p.t >= cutoff);
@@ -213,10 +242,10 @@ class MikrotikIndicator extends PanelMenu.Button {
 
         const width = this._settings.get_int('graph-width');
         this._rxGraphItem.label.set_text(
-            sparkline(this._rxHistory.map(p => p.v), width)
+            rx === null ? '--' : sparkline(this._rxHistory.map(p => p.v), width)
         );
         this._txGraphItem.label.set_text(
-            sparkline(this._txHistory.map(p => p.v), width)
+            tx === null ? '--' : sparkline(this._txHistory.map(p => p.v), width)
         );
     }
 
@@ -226,10 +255,9 @@ class MikrotikIndicator extends PanelMenu.Button {
     }
 
     destroy() {
-        if (this._timeoutId) {
-            GLib.source_remove(this._timeoutId);
-            this._timeoutId = null;
-        }
+        this._stopPolling();
+        if (this._settingsChangedId)
+            this._settings.disconnect(this._settingsChangedId);
         super.destroy();
     }
 });

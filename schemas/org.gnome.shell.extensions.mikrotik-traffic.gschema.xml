@@ -30,6 +30,14 @@
       <default>'ether1'</default>
       <summary>Interface to monitor</summary>
     </key>
+    <key name="monitor-rx" type="b">
+      <default>true</default>
+      <summary>Monitor received traffic</summary>
+    </key>
+    <key name="monitor-tx" type="b">
+      <default>true</default>
+      <summary>Monitor transmitted traffic</summary>
+    </key>
     <key name="poll-interval" type="i">
       <range min="1" max="300"/>
       <default>1</default>

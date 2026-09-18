@@ -6,6 +6,7 @@ import {ExtensionPreferences} from 'resource:///org/gnome/Shell/Extensions/js/ex
 export default class MikrotikTrafficPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
         const settings = this.getSettings();
+        settings.delay();
 
         const page = new Adw.PreferencesPage({
             title: 'Connection',
@@ -37,8 +38,22 @@ export default class MikrotikTrafficPreferences extends ExtensionPreferences {
         page.add(monGroup);
 
         this._addEntryRow(monGroup, settings, 'interface-name', 'Interface name (e.g. ether1)');
+        this._addSwitchRow(monGroup, settings, 'monitor-rx', 'Monitor receive traffic (RX)');
+        this._addSwitchRow(monGroup, settings, 'monitor-tx', 'Monitor transmit traffic (TX)');
         this._addSpinRow(monGroup, settings, 'poll-interval', 'Poll interval (seconds)', 1, 300);
         this._addSpinRow(monGroup, settings, 'graph-width', 'Graph width (characters)', 20, 120);
+
+        const applyRow = new Adw.ActionRow({
+            title: 'Apply settings',
+            subtitle: 'Save changes and restart traffic collection immediately',
+        });
+        const applyButton = new Gtk.Button({
+            label: 'Apply',
+            valign: Gtk.Align.CENTER,
+        });
+        applyButton.connect('clicked', () => settings.apply());
+        applyRow.add_suffix(applyButton);
+        monGroup.add(applyRow);
 
         const helpGroup = new Adw.PreferencesGroup();
         page.add(helpGroup);
