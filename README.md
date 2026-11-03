@@ -107,3 +107,16 @@ To disable and re-enable it:
 gnome-extensions disable mikrotik-traffic@local.dev
 gnome-extensions enable mikrotik-traffic@local.dev
 ```
+
+## Changelog
+
+### 1.1.0
+
+- Added SNMP v2c as an alternative data source to the RouterOS REST API (`ifHCInOctets` / `ifHCOutOctets`).
+- New preferences: data source, SNMP port, and SNMP community.
+- Added `snmp.js`, a pure-GJS SNMP client (no external dependencies).
+
+### 1.0.0
+
+- Added an **Apply** button to preferences and separate RX/TX monitoring options.
+- Initial release: live RX/TX rates in the top panel with a one-hour text graph, via the RouterOS REST API.
