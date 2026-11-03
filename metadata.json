@@ -4,7 +4,8 @@
     "description": "Shows live RX/TX traffic for a MikroTik RouterOS interface in the top panel, with a text-based (sparkline) graph of the last hour.",
     "shell-version": ["45", "46", "47", "48"],
     "url": "",
-    "version": 1,
+    "version": 2,
+    "version-name": "1.1.0",
     "settings-schema": "org.gnome.shell.extensions.mikrotik-traffic",
     "gettext-domain": "mikrotik-traffic"
 }

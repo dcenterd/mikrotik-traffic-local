@@ -9,6 +9,8 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
+import {SnmpClient, OID_HC_IN_OCTETS, OID_HC_OUT_OCTETS} from './snmp.js';
+
 const HISTORY_SECONDS = 3600; // keep one hour of samples
 const SPARK_CHARS = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
 
@@ -72,6 +74,7 @@ class MikrotikIndicator extends PanelMenu.Button {
 
         this._rxHistory = []; // [{t, v}]
         this._txHistory = [];
+        this._resetSnmpState();
 
         const box = new St.BoxLayout({style_class: 'mikrotik-panel-box'});
         this._label = new St.Label({
@@ -118,10 +121,6 @@ class MikrotikIndicator extends PanelMenu.Button {
         const settingsItem = new PopupMenu.PopupMenuItem('Settings…');
         settingsItem.connect('activate', () => this._extension.openPreferences());
         this.menu.addMenuItem(settingsItem);
-
-        const applyItem = new PopupMenu.PopupMenuItem('Apply settings');
-        applyItem.connect('activate', () => this._applySettings());
-        this.menu.addMenuItem(applyItem);
     }
 
     _startPolling() {
@@ -145,13 +144,103 @@ class MikrotikIndicator extends PanelMenu.Button {
         }
     }
 
+    _resetSnmpState() {
+        this._snmpIfIndex = null;
+        this._snmpIfName = null;
+        this._snmpLast = null; // {t, rx, tx} BigInt counters
+        this._snmpBusy = false;
+        this._snmpGeneration = (this._snmpGeneration ?? 0) + 1;
+    }
+
     _applySettings() {
         this._rxHistory = [];
         this._txHistory = [];
+        this._resetSnmpState();
         this._startPolling();
     }
 
     _poll() {
+        if (this._settings.get_string('data-source') === 'snmp')
+            this._pollSnmp();
+        else
+            this._pollRest();
+    }
+
+    async _pollSnmp() {
+        if (this._snmpBusy)
+            return;
+
+        const host = this._settings.get_string('router-host');
+        const iface = this._settings.get_string('interface-name');
+        const monitorRx = this._settings.get_boolean('monitor-rx');
+        const monitorTx = this._settings.get_boolean('monitor-tx');
+
+        if (!host || !iface) {
+            this._onError('Not configured — set host & interface in Settings');
+            return;
+        }
+        if (!monitorRx && !monitorTx) {
+            this._onError('Select receive or transmit traffic in Settings');
+            return;
+        }
+
+        const generation = this._snmpGeneration;
+        this._snmpBusy = true;
+        try {
+            const client = new SnmpClient({
+                host,
+                port: this._settings.get_int('snmp-port'),
+                community: this._settings.get_string('snmp-community'),
+            });
+
+            if (this._snmpIfIndex === null || this._snmpIfName !== iface) {
+                const idx = await client.findInterfaceIndex(iface);
+                if (generation !== this._snmpGeneration)
+                    return;
+                this._snmpIfIndex = idx;
+                this._snmpIfName = iface;
+                this._snmpLast = null;
+            }
+
+            const idx = this._snmpIfIndex;
+            const vbs = await client.get([
+                `${OID_HC_IN_OCTETS}.${idx}`,
+                `${OID_HC_OUT_OCTETS}.${idx}`,
+            ]);
+            if (generation !== this._snmpGeneration)
+                return;
+
+            const now = GLib.get_monotonic_time() / 1e6;
+            const cur = {t: now, rx: vbs[0].value, tx: vbs[1].value};
+            const last = this._snmpLast;
+            this._snmpLast = cur;
+
+            if (!last) {
+                this._statusItem.label.set_text('Collecting first SNMP sample…');
+                return;
+            }
+            const dt = cur.t - last.t;
+            if (dt <= 0 || cur.rx < last.rx || cur.tx < last.tx) {
+                // Counter reset (e.g. router reboot): skip this sample.
+                return;
+            }
+            const rate = (a, b) => Math.round(Number(a - b) * 8 / dt);
+            this._onData(
+                monitorRx ? rate(cur.rx, last.rx) : null,
+                monitorTx ? rate(cur.tx, last.tx) : null
+            );
+        } catch (e) {
+            if (generation === this._snmpGeneration) {
+                this._snmpIfIndex = null; // re-resolve next time
+                this._onError(e.message);
+            }
+        } finally {
+            if (generation === this._snmpGeneration)
+                this._snmpBusy = false;
+        }
+    }
+
+    _pollRest() {
         const host = this._settings.get_string('router-host');
         const port = this._settings.get_int('router-port');
         const useHttps = this._settings.get_boolean('use-https');
@@ -256,6 +345,7 @@ class MikrotikIndicator extends PanelMenu.Button {
 
     destroy() {
         this._stopPolling();
+        this._snmpGeneration++; // drop any in-flight SNMP result
         if (this._settingsChangedId)
             this._settings.disconnect(this._settingsChangedId);
         super.destroy();

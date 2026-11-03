@@ -14,15 +14,24 @@ export default class MikrotikTrafficPreferences extends ExtensionPreferences {
         });
         window.add(page);
 
+        const srcGroup = new Adw.PreferencesGroup({title: 'Data Source'});
+        page.add(srcGroup);
+        const sources = ['rest', 'snmp'];
+        const srcRow = new Adw.ComboRow({
+            title: 'Read traffic via',
+            model: Gtk.StringList.new(['RouterOS REST API', 'SNMP v2c']),
+            selected: Math.max(0, sources.indexOf(settings.get_string('data-source'))),
+        });
+        srcGroup.add(srcRow);
+
         const connGroup = new Adw.PreferencesGroup({
-            title: 'Router Connection',
+            title: 'REST API Connection',
             description:
                 'Use a dedicated, read-only RouterOS user for this — the password is ' +
                 'stored in plain text in dconf.',
         });
         page.add(connGroup);
 
-        this._addEntryRow(connGroup, settings, 'router-host', 'Router host / IP');
         this._addSpinRow(connGroup, settings, 'router-port', 'REST API port', 1, 65535);
         this._addSwitchRow(connGroup, settings, 'use-https', 'Use HTTPS (www-ssl service)');
         this._addSwitchRow(
@@ -34,8 +43,29 @@ export default class MikrotikTrafficPreferences extends ExtensionPreferences {
         this._addEntryRow(connGroup, settings, 'username', 'Username');
         this._addPasswordRow(connGroup, settings, 'password', 'Password');
 
+        const snmpGroup = new Adw.PreferencesGroup({
+            title: 'SNMP v2c Connection',
+            description:
+                'The community string is sent in clear text and stored in plain ' +
+                'text in dconf. Use a read-only community restricted to this PC.',
+        });
+        page.add(snmpGroup);
+        this._addSpinRow(snmpGroup, settings, 'snmp-port', 'SNMP port (UDP)', 1, 65535);
+        this._addEntryRow(snmpGroup, settings, 'snmp-community', 'Community');
+
+        const updateSource = () => {
+            const src = sources[srcRow.selected] ?? 'rest';
+            settings.set_string('data-source', src);
+            connGroup.visible = src === 'rest';
+            snmpGroup.visible = src === 'snmp';
+        };
+        srcRow.connect('notify::selected', updateSource);
+        updateSource();
+
         const monGroup = new Adw.PreferencesGroup({title: 'Monitoring'});
         page.add(monGroup);
+
+        this._addEntryRow(monGroup, settings, 'router-host', 'Router host / IP');
 
         this._addEntryRow(monGroup, settings, 'interface-name', 'Interface name (e.g. ether1)');
         this._addSwitchRow(monGroup, settings, 'monitor-rx', 'Monitor receive traffic (RX)');
@@ -64,6 +94,12 @@ export default class MikrotikTrafficPreferences extends ExtensionPreferences {
                 'Create a user whose group has "read" and "api" permissions.',
         });
         helpGroup.add(helpRow);
+        helpGroup.add(new Adw.ActionRow({
+            title: 'For SNMP',
+            subtitle:
+                'Enable SNMP: /snmp set enabled=yes, then add a read-only community ' +
+                '(/snmp community) limited to this PC\'s address.',
+        }));
     }
 
     _addEntryRow(group, settings, key, title) {

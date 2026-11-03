@@ -1,6 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
   <schema id="org.gnome.shell.extensions.mikrotik-traffic" path="/org/gnome/shell/extensions/mikrotik-traffic/">
+    <key name="data-source" type="s">
+      <choices>
+        <choice value="rest"/>
+        <choice value="snmp"/>
+      </choices>
+      <default>'rest'</default>
+      <summary>Data source: RouterOS REST API or SNMP v2c</summary>
+    </key>
+    <key name="snmp-port" type="i">
+      <range min="1" max="65535"/>
+      <default>161</default>
+      <summary>SNMP UDP port</summary>
+    </key>
+    <key name="snmp-community" type="s">
+      <default>'public'</default>
+      <summary>SNMP v2c community string (stored in plain text in dconf)</summary>
+    </key>
     <key name="router-host" type="s">
       <default>'192.168.88.1'</default>
       <summary>Router IP or hostname</summary>

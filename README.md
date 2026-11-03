@@ -7,8 +7,9 @@ The extension also provides a text-based graph showing the last hour of traffic 
 ## Requirements
 
 - GNOME Shell 45, 46, 47, or 48
-- MikroTik RouterOS with the REST API enabled
-- A RouterOS user with read-only access and API permissions
+- MikroTik RouterOS with either the REST API or SNMP enabled
+- REST: a RouterOS user with read-only access and API permissions
+- SNMP: SNMP v2c enabled with a read-only community
 
 ## Installation
 
@@ -17,7 +18,7 @@ From the extension directory:
 ```bash
 glib-compile-schemas schemas
 mkdir -p ~/.local/share/gnome-shell/extensions/mikrotik-traffic@local.dev
-cp extension.js metadata.json prefs.js stylesheet.css ~/.local/share/gnome-shell/extensions/mikrotik-traffic@local.dev/
+cp extension.js snmp.js metadata.json prefs.js stylesheet.css ~/.local/share/gnome-shell/extensions/mikrotik-traffic@local.dev/
 cp -r schemas ~/.local/share/gnome-shell/extensions/mikrotik-traffic@local.dev/
 ```
 
@@ -38,6 +39,14 @@ On X11, press `Alt+F2`, enter `r`, and press Enter to reload GNOME Shell. On Way
 
 The default REST API port is `443` with HTTPS enabled. The extension supports plain HTTP when HTTPS is disabled.
 
+### SNMP setup (alternative to REST)
+
+1. Run `/snmp set enabled=yes` on the router.
+2. Add a read-only community under **/snmp community**, restricted to your PC's address.
+3. In the extension preferences, set **Read traffic via** to **SNMP v2c**.
+
+The extension reads `ifHCInOctets` / `ifHCOutOctets` and computes bits per second from the difference between polls, so the first sample after applying settings shows no rate. Only SNMP v2c is supported. The community string is sent in clear text and stored in plain text in GNOME settings.
+
 ## Configuration
 
 Open the preferences window:
@@ -48,8 +57,10 @@ gnome-extensions prefs mikrotik-traffic@local.dev
 
 Configure:
 
+- Data source (REST API or SNMP v2c)
 - Router host or IP address
 - REST API port
+- SNMP port and community
 - HTTPS usage
 - Certificate validation behavior
 - RouterOS username and password
@@ -71,7 +82,6 @@ The top-panel indicator shows the current RX and TX rates. Click it to view:
 - RX history for the last hour
 - TX history for the last hour
 - A manual **Refresh now** action
-- An **Apply settings** action that restarts polling immediately
 - A shortcut to the extension settings
 
 ## Troubleshooting
@@ -82,6 +92,7 @@ Check that:
 - The selected RouterOS interface name is correct.
 - The REST API service is enabled on the configured port.
 - The username has `read` and `api` permissions.
+- For SNMP: UDP port 161 is reachable, the community matches, and the router's community address filter allows your PC.
 - HTTPS certificate errors are either fixed or intentionally ignored in the preferences.
 
 To inspect the extension state:
