@@ -120,3 +120,9 @@ gnome-extensions enable mikrotik-traffic@local.dev
 
 - Added an **Apply** button to preferences and separate RX/TX monitoring options.
 - Initial release: live RX/TX rates in the top panel with a one-hour text graph, via the RouterOS REST API.
+
+## Author and license
+
+Developed by Zareh Kasparian.
+
+Released under the [MIT License](LICENSE).
